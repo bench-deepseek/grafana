@@ -439,6 +439,121 @@ describe('Combobox', () => {
       expect(typeof onChangeHandler.mock.calls[1][0].value === 'string').toBeFalsy();
       expect(typeof onChangeHandler.mock.calls[1][0].value === 'number').toBeTruthy();
     });
+
+    it('commits the typed value on blur when commitCustomValueOnBlur is enabled', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={options} value={null} onChange={onChange} createCustomValue commitCustomValueOnBlur />
+          <button>outside</button>
+        </>
+      );
+      await userEvent.type(screen.getByRole('combobox'), 'my-custom');
+      await userEvent.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({ value: 'my-custom', label: 'my-custom', description: 'Use custom value' })
+      );
+      expect(screen.getByDisplayValue('my-custom')).toBeInTheDocument();
+    });
+
+    it('preserves customValueDescription on blur commit', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox
+            options={options}
+            value={null}
+            onChange={onChange}
+            createCustomValue
+            commitCustomValueOnBlur
+            customValueDescription="Press Enter to create branch"
+          />
+          <button>outside</button>
+        </>
+      );
+      await userEvent.type(screen.getByRole('combobox'), 'new-branch');
+      await userEvent.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ description: 'Press Enter to create branch' }));
+    });
+
+    it('does not commit typed text on blur by default even with createCustomValue', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={options} value={null} onChange={onChange} createCustomValue />
+          <button>outside</button>
+        </>
+      );
+      await userEvent.type(screen.getByRole('combobox'), 'not-confirmed');
+      await userEvent.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('combobox')).toHaveValue('');
+    });
+
+    it('cancels typed text on Escape when commitCustomValueOnBlur is enabled', async () => {
+      const onChange = jest.fn();
+      render(<Combobox options={options} value={null} onChange={onChange} createCustomValue commitCustomValueOnBlur />);
+      await userEvent.type(screen.getByRole('combobox'), 'discard-me');
+      await userEvent.keyboard('{Escape}');
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('combobox')).toHaveValue('');
+    });
+
+    it('commits a typed replacement on blur even when a value is already selected', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={options} value="1" onChange={onChange} createCustomValue commitCustomValueOnBlur />
+          <button>outside</button>
+        </>
+      );
+      const input = screen.getByRole('combobox');
+      await user.clear(input);
+      await user.type(input, 'replacement', { skipClick: true });
+      await user.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ value: 'replacement', label: 'replacement' })
+      );
+      expect(input).toHaveValue('replacement');
+    });
+
+    it('does not re-commit when the menu opens and blurs without typing', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={options} value="1" onChange={onChange} createCustomValue commitCustomValueOnBlur />
+          <button>outside</button>
+        </>
+      );
+      const input = screen.getByRole('combobox');
+      await userEvent.click(input);
+      await userEvent.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(input).toHaveValue('Option 1');
+    });
+
+    it('does not re-commit when typed text equals the current selection label', async () => {
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={options} value="1" onChange={onChange} createCustomValue commitCustomValueOnBlur />
+          <button>outside</button>
+        </>
+      );
+      const input = screen.getByRole('combobox');
+      await user.clear(input);
+      await user.type(input, 'Option 1', { skipClick: true });
+      await user.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(input).toHaveValue('Option 1');
+    });
   });
 
   describe('async', () => {
@@ -458,6 +573,27 @@ describe('Combobox', () => {
 
     // Assume that most apis only return with the value
     const simpleAsyncOptions = [{ value: 'Option 1' }, { value: 'Option 2' }, { value: 'Option 3' }];
+
+    it('commits typed text on blur with async options when commitCustomValueOnBlur is enabled', async () => {
+      const asyncOptions = jest.fn(() => Promise.resolve([{ label: 'Remote', value: 'remote' }]));
+      const onChange = jest.fn();
+      render(
+        <>
+          <Combobox options={asyncOptions} value={null} onChange={onChange} createCustomValue commitCustomValueOnBlur />
+          <button>outside</button>
+        </>
+      );
+      const input = screen.getByRole('combobox');
+      await user.click(input);
+      await act(async () => jest.advanceTimersByTime(DEBOUNCE_TIME_MS));
+      await user.type(input, 'typed-remote');
+      await act(async () => jest.advanceTimersByTime(DEBOUNCE_TIME_MS));
+      await user.click(screen.getByRole('button', { name: 'outside' }));
+
+      expect(onChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ value: 'typed-remote', label: 'typed-remote' })
+      );
+    });
 
     it('should allow async options', async () => {
       const asyncOptions = jest.fn(() => Promise.resolve(simpleAsyncOptions));

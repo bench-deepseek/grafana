@@ -16,6 +16,23 @@ type AsyncOptions<T extends string | number> =
 
 const asyncNoop = () => Promise.resolve([]);
 
+/**
+ * Build the option object used to represent a user-typed custom value. The
+ * Enter/click path (via `addCustomValue`) and the blur commit path (via
+ * Combobox's stateReducer) both use this so the emitted option shape stays
+ * consistent across code paths.
+ */
+export function buildCustomValueOption<T extends string | number>(
+  typed: string,
+  customValueDescription?: string
+): ComboboxOption<T> {
+  return {
+    label: typed,
+    value: typed as T,
+    description: customValueDescription ?? t('combobox.custom-value.description', 'Use custom value'),
+  };
+}
+
 export const DEBOUNCE_TIME_MS = 200;
 
 /**
@@ -77,11 +94,7 @@ export function useOptions<T extends string | number>(
         if (!customValueExists) {
           // Make sure to clone the array first to avoid mutating the original array!
           currentOptions = currentOptions.slice();
-          currentOptions.unshift({
-            label: userTypedSearch,
-            value: userTypedSearch as T,
-            description: customValueDescription ?? t('combobox.custom-value.description', 'Use custom value'),
-          });
+          currentOptions.unshift(buildCustomValueOption<T>(userTypedSearch, customValueDescription));
         }
       }
       return currentOptions;

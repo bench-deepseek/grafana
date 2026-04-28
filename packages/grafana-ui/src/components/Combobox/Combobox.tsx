@@ -18,7 +18,7 @@ import { itemToString } from './filter';
 import { getComboboxStyles, MENU_OPTION_HEIGHT, MENU_OPTION_HEIGHT_DESCRIPTION } from './getComboboxStyles';
 import { type ComboboxOption } from './types';
 import { useComboboxFloat } from './useComboboxFloat';
-import { useOptions } from './useOptions';
+import { buildCustomValueOption, useOptions } from './useOptions';
 import { isNewGroup } from './utils';
 
 // TODO: It would be great if ComboboxOption["label"] was more generic so that if consumers do pass it in (for async),
@@ -38,6 +38,15 @@ interface ComboboxStaticProps<T extends string | number>
    * Defaults to "Use custom value".
    */
   customValueDescription?: string;
+  /**
+   * When true together with `createCustomValue`, the typed text is committed
+   * as a custom value when the menu closes due to input blur (for example
+   * when the user clicks a submit button or tabs to another control). Escape
+   * still cancels typed text. Defaults to false; enable only for flows where
+   * there is no explicit confirm control (such as a multi-step wizard whose
+   * Next button doubles as submit).
+   */
+  commitCustomValueOnBlur?: boolean;
 
   /**
    * An array of options, or a function that returns a promise resolving to an array of options.
@@ -153,6 +162,7 @@ export const Combobox = <T extends string | number>(props: ComboboxProps<T>) => 
     isClearable, // this should be default false, but TS can't infer the conditional type if you do
     createCustomValue = false,
     customValueDescription,
+    commitCustomValueOnBlur = false,
     id: idProp,
     width,
     minWidth,
@@ -348,6 +358,7 @@ export const Combobox = <T extends string | number>(props: ComboboxProps<T>) => 
     },
     stateReducer(state, actionAndChanges) {
       let { changes } = actionAndChanges;
+      const { type } = actionAndChanges;
       const menuBeingOpened = state.isOpen === false && changes.isOpen === true;
       const menuBeingClosed = state.isOpen === true && changes.isOpen === false;
 
@@ -362,13 +373,25 @@ export const Combobox = <T extends string | number>(props: ComboboxProps<T>) => 
       }
 
       if (menuBeingClosed) {
-        // Flush the selected item to the input when the menu is closed
-        if (changes.selectedItem) {
+        const typed = changes.inputValue ?? '';
+        const optInCommit =
+          createCustomValue && commitCustomValueOnBlur && type === useCombobox.stateChangeTypes.InputBlur;
+        const typedDiffersFromSelection =
+          typed !== '' && (!changes.selectedItem || typed !== itemToString(changes.selectedItem));
+
+        if (optInCommit && typedDiffersFromSelection) {
+          changes = {
+            ...changes,
+            selectedItem: buildCustomValueOption<T>(typed, customValueDescription),
+            inputValue: typed,
+          };
+        } else if (changes.selectedItem) {
+          // Flush the selected item to the input when the menu is closed
           changes = {
             ...changes,
             inputValue: itemToString(changes.selectedItem),
           };
-        } else if (changes.inputValue !== '') {
+        } else if (typed !== '') {
           // Otherwise if no selected value, clear any search from the input
           changes = {
             ...changes,
