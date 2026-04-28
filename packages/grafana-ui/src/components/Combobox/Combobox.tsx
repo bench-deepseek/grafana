@@ -374,12 +374,16 @@ export const Combobox = <T extends string | number>(props: ComboboxProps<T>) => 
 
       if (menuBeingClosed) {
         const typed = changes.inputValue ?? '';
-        const optInCommit =
-          createCustomValue && commitCustomValueOnBlur && type === useCombobox.stateChangeTypes.InputBlur;
-        const typedDiffersFromSelection =
-          typed !== '' && (!changes.selectedItem || typed !== itemToString(changes.selectedItem));
+        // On blur, commit typed text as a new custom value if it differs from the current selection.
+        const shouldCommitCustomValue =
+          createCustomValue &&
+          commitCustomValueOnBlur &&
+          type === useCombobox.stateChangeTypes.InputBlur &&
+          typed !== '' &&
+          (!changes.selectedItem || typed !== itemToString(changes.selectedItem));
 
-        if (optInCommit && typedDiffersFromSelection) {
+        if (shouldCommitCustomValue) {
+          // Setting selectedItem triggers onChange, matching the Enter/click path.
           changes = {
             ...changes,
             selectedItem: buildCustomValueOption<T>(typed, customValueDescription),
