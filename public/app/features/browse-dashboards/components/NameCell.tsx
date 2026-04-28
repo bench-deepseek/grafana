@@ -92,12 +92,16 @@ export function NameCell({ row: { original: data }, onFolderClick, treeID }: Nam
         <Text variant="body" truncate id={treeID && makeRowID(treeID, item)}>
           {item.url ? (
             <Link
-              onClick={() => {
+              onClick={(event) => {
+                // event.detail is 0 for keyboard-activated clicks (Enter on a focused link)
+                // and >= 1 for mouse clicks. Touch can be either depending on platform.
+                const interactionMode = event.detail === 0 ? 'keyboard' : 'mouse';
                 reportInteraction('grafana_browse_dashboards_page_click_list_item', {
                   itemKind: item.kind,
                   parent: item.parentUID ? 'folder' : 'root',
                   source: 'browseDashboardsPage_BrowseView',
                   uid: item.uid,
+                  interactionMode,
                 });
               }}
               href={item.url}

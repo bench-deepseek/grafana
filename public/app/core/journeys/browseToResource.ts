@@ -10,9 +10,13 @@ import { collectUnsubs, str } from './utils';
  * Start triggers:
  *   - grafana_browse_dashboards_page_view — user lands on the browse dashboards page (no active journey)
  *
- * Steps:
+ * Events (point-in-time):
+ *   - search_query — user typed in the search box (debounced at the source, one per burst)
+ *
+ * Steps (duration):
  *   - navigate_folder — user clicks a folder item; ends when the folder view loads
- *   - select_resource — user clicks a non-folder item; ends when the dashboard loads
+ *   - select_resource — user clicks a non-folder item; ends when the dashboard loads.
+ *     Carries `interactionMode: 'keyboard' | 'mouse'` so we can see how the user activated the result.
  *
  * End conditions:
  *   - success: dashboards_init_dashboard_completed — dashboard loaded after resource click
@@ -51,12 +55,24 @@ onJourneyInstance('browse_to_resource', (handle) => {
         pendingSelectStep = handle.startStep('select_resource', {
           resourceType: str(props.itemKind ?? 'unknown'),
           resourceUID: str(props.uid),
+          interactionMode: str(props.interactionMode ?? 'unknown'),
         });
         handle.setAttributes({
           resourceType: str(props.itemKind ?? 'unknown'),
           resourceUID: str(props.uid),
+          interactionMode: str(props.interactionMode ?? 'unknown'),
         });
       }
+    })
+  );
+
+  // Each debounced typing burst becomes a point-in-time event on the journey.
+  add(
+    onInteraction('grafana_browse_dashboards_page_search', (props) => {
+      handle.recordEvent('search_query', {
+        hasQuery: str(props.hasQuery ?? 'false'),
+        queryLength: str(props.queryLength ?? 'empty'),
+      });
     })
   );
 
