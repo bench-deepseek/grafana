@@ -96,7 +96,7 @@ func RunTargetServer(opts standalone.BuildInfo, cli *cli.Context) error {
 	if err := featuremgmt.InitOpenFeatureWithCfg(cfg); err != nil {
 		return err
 	}
-	cfg.ResolvePluginInstallToken()
+	cfg.ResolveGnetProxyToken()
 
 	s, err := server.InitializeModuleServer(
 		cfg,

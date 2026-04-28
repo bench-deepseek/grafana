@@ -389,47 +389,47 @@ func TestLoadingSettings(t *testing.T) {
 	require.NoError(t, err)
 
 	flagEnabled := map[string]memprovider.InMemoryFlag{
-		"pluginsDedicatedInstallToken": {
+		"dedicatedGnetProxyToken": {
 			State:          memprovider.Enabled,
 			DefaultVariant: "enabled",
 			Variants:       map[string]any{"enabled": true},
 		},
 	}
 	flagDisabled := map[string]memprovider.InMemoryFlag{
-		"pluginsDedicatedInstallToken": {
+		"dedicatedGnetProxyToken": {
 			State:          memprovider.Enabled,
 			DefaultVariant: "disabled",
 			Variants:       map[string]any{"disabled": false},
 		},
 	}
 
-	t.Run("PluginInstallToken falls back to sso_api_token when flag is off", func(t *testing.T) {
+	t.Run("GnetProxyToken falls back to sso_api_token when flag is off", func(t *testing.T) {
 		defer testProvider.Cleanup()
 		testProvider.UsingFlags(t, flagDisabled)
 		t.Setenv("GF_GRAFANA_COM_SSO_API_TOKEN", "sso-token")
-		t.Setenv("GF_PLUGINS_INSTALL_TOKEN", "dedicated-token")
+		t.Setenv("GF_GRAFANA_COM_GNET_PROXY_TOKEN", "dedicated-token")
 
 		cfg := NewCfg()
 		err := cfg.Load(CommandLineArgs{HomePath: "../../"})
 		require.NoError(t, err)
-		cfg.ResolvePluginInstallToken()
-		require.Equal(t, "sso-token", cfg.PluginInstallToken)
+		cfg.ResolveGnetProxyToken()
+		require.Equal(t, "sso-token", cfg.GnetProxyToken)
 	})
 
-	t.Run("PluginInstallToken uses dedicated token when flag is on and install_token is set", func(t *testing.T) {
+	t.Run("GnetProxyToken uses dedicated token when flag is on and gnet_proxy_token is set", func(t *testing.T) {
 		defer testProvider.Cleanup()
 		testProvider.UsingFlags(t, flagEnabled)
 		t.Setenv("GF_GRAFANA_COM_SSO_API_TOKEN", "sso-token")
-		t.Setenv("GF_PLUGINS_INSTALL_TOKEN", "dedicated-token")
+		t.Setenv("GF_GRAFANA_COM_GNET_PROXY_TOKEN", "dedicated-token")
 
 		cfg := NewCfg()
 		err := cfg.Load(CommandLineArgs{HomePath: "../../"})
 		require.NoError(t, err)
-		cfg.ResolvePluginInstallToken()
-		require.Equal(t, "dedicated-token", cfg.PluginInstallToken)
+		cfg.ResolveGnetProxyToken()
+		require.Equal(t, "dedicated-token", cfg.GnetProxyToken)
 	})
 
-	t.Run("PluginInstallToken falls back to sso_api_token when flag is on but install_token is not set", func(t *testing.T) {
+	t.Run("GnetProxyToken falls back to sso_api_token when flag is on but gnet_proxy_token is not set", func(t *testing.T) {
 		defer testProvider.Cleanup()
 		testProvider.UsingFlags(t, flagEnabled)
 		t.Setenv("GF_GRAFANA_COM_SSO_API_TOKEN", "sso-token")
@@ -437,8 +437,8 @@ func TestLoadingSettings(t *testing.T) {
 		cfg := NewCfg()
 		err := cfg.Load(CommandLineArgs{HomePath: "../../"})
 		require.NoError(t, err)
-		cfg.ResolvePluginInstallToken()
-		require.Equal(t, "sso-token", cfg.PluginInstallToken)
+		cfg.ResolveGnetProxyToken()
+		require.Equal(t, "sso-token", cfg.GnetProxyToken)
 	})
 }
 
@@ -662,6 +662,12 @@ func TestRedactedValue(t *testing.T) {
 			desc:     "client token",
 			key:      "token",
 			value:    "test",
+			expected: RedactedPassword,
+		},
+		{
+			desc:     "gnet_proxy_token",
+			key:      "GF_GRAFANA_COM_GNET_PROXY_TOKEN",
+			value:    "some-token",
 			expected: RedactedPassword,
 		},
 	}
