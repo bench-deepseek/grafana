@@ -132,82 +132,17 @@ describe('browseToResource journey wiring', () => {
     simulateInteraction('grafana_browse_dashboards_page_click_list_item', {
       itemKind: 'dashboard',
       uid: 'dash-456',
-      interactionMode: 'mouse',
     });
 
     expect(mockHandle.startStep).toHaveBeenCalledWith('select_resource', {
       resourceType: 'dashboard',
       resourceUID: 'dash-456',
-      interactionMode: 'mouse',
     });
 
     expect(mockHandle.setAttributes).toHaveBeenCalledWith({
       resourceType: 'dashboard',
       resourceUID: 'dash-456',
-      interactionMode: 'mouse',
     });
-  });
-
-  it('should propagate keyboard interactionMode to select_resource step', () => {
-    loadWiring();
-
-    simulateInteraction('grafana_browse_dashboards_page_view', { folderUID: '' });
-
-    simulateInteraction('grafana_browse_dashboards_page_click_list_item', {
-      itemKind: 'dashboard',
-      uid: 'dash-789',
-      interactionMode: 'keyboard',
-    });
-
-    expect(mockHandle.startStep).toHaveBeenCalledWith(
-      'select_resource',
-      expect.objectContaining({ interactionMode: 'keyboard' })
-    );
-  });
-
-  it('should default interactionMode to "unknown" when missing from the click event', () => {
-    loadWiring();
-
-    simulateInteraction('grafana_browse_dashboards_page_view', { folderUID: '' });
-
-    // Older callers may not yet emit interactionMode.
-    simulateInteraction('grafana_browse_dashboards_page_click_list_item', {
-      itemKind: 'dashboard',
-      uid: 'dash-000',
-    });
-
-    expect(mockHandle.startStep).toHaveBeenCalledWith(
-      'select_resource',
-      expect.objectContaining({ interactionMode: 'unknown' })
-    );
-  });
-
-  it('should record a search_query event when grafana_browse_dashboards_page_search fires', () => {
-    loadWiring();
-
-    simulateInteraction('grafana_browse_dashboards_page_view', { folderUID: '' });
-
-    simulateInteraction('grafana_browse_dashboards_page_search', {
-      hasQuery: 'true',
-      queryLength: '4-10',
-    });
-
-    expect(mockHandle.recordEvent).toHaveBeenCalledWith('search_query', {
-      hasQuery: 'true',
-      queryLength: '4-10',
-    });
-  });
-
-  it('should record multiple search_query events for separate typing bursts', () => {
-    loadWiring();
-
-    simulateInteraction('grafana_browse_dashboards_page_view', { folderUID: '' });
-
-    simulateInteraction('grafana_browse_dashboards_page_search', { hasQuery: 'true', queryLength: '1-3' });
-    simulateInteraction('grafana_browse_dashboards_page_search', { hasQuery: 'true', queryLength: '4-10' });
-    simulateInteraction('grafana_browse_dashboards_page_search', { hasQuery: 'false', queryLength: 'empty' });
-
-    expect(mockHandle.recordEvent).toHaveBeenCalledTimes(3);
   });
 
   it('should end select_resource step and journey on dashboards_init_dashboard_completed', () => {

@@ -59,27 +59,6 @@ const BrowseDashboardsPage = memo(({ queryParams }: { queryParams: Record<string
     reportInteraction('grafana_browse_dashboards_page_view', { folderUID: folderUID ?? '' }, { silent: true });
   }, [folderUID]);
 
-  // CUJ-only signal: debounce the search input so we get one event per typing
-  // burst, not one per keystroke. Skip the initial empty-query render.
-  const hasTypedSearchRef = useRef(false);
-  useEffect(() => {
-    const query = searchState.query ?? '';
-    if (!hasTypedSearchRef.current && query.length === 0) {
-      return;
-    }
-    hasTypedSearchRef.current = true;
-    const handle = setTimeout(() => {
-      const len = query.length;
-      const queryLength = len === 0 ? 'empty' : len <= 3 ? '1-3' : len <= 10 ? '4-10' : '11+';
-      reportInteraction(
-        'grafana_browse_dashboards_page_search',
-        { hasQuery: len > 0 ? 'true' : 'false', queryLength },
-        { silent: true }
-      );
-    }, 500);
-    return () => clearTimeout(handle);
-  }, [searchState.query]);
-
   useEffect(() => {
     stateManager.initStateFromUrl(folderUID);
 
